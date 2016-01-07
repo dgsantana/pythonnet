@@ -216,6 +216,24 @@ namespace Python.Runtime {
             return assembly;
         }
 
+        /// <summary>  
+        /// Loads an assembly using full path.  
+        /// </summary>  
+        /// <param name="name"></param>  
+        /// <returns></returns>  
+        public static Assembly LoadAssemblyFullPath(string name) {
+            Assembly assembly = null;
+            if (Path.IsPathRooted(name)) {
+                if (!Path.HasExtension(name))
+                    name = name + ".dll";
+                if (File.Exists(name)) {
+                    try { assembly = Assembly.LoadFrom(name); }
+                    catch { }
+                }
+            }
+            return assembly;
+        }
+
         //===================================================================
         // Returns an assembly that's already been loaded
         //===================================================================
@@ -289,8 +307,7 @@ namespace Python.Runtime {
         // a.b.c.d, each of a, a.b, a.b.c and a.b.c.d are considered to 
         // be valid namespaces (to better match Python import semantics).
         //===================================================================
-
-        static void ScanAssembly(Assembly assembly)
+        internal static void ScanAssembly(Assembly assembly)
         {
             // A couple of things we want to do here: first, we want to
             // gather a list of all of the namespaces contributed to by
@@ -342,6 +359,16 @@ namespace Python.Runtime {
             return namespaces.ContainsKey(name);
         }
 
+        //===================================================================
+        // Returns list of assemblies that declare types in a given namespace
+        //===================================================================
+
+        public static IEnumerable<Assembly> GetAssemblies(string nsname) {
+            if (!namespaces.ContainsKey(nsname))
+                return new List<Assembly>();
+
+            return namespaces[nsname].Keys;
+        }
 
         //===================================================================
         // Returns the current list of valid names for the input namespace.
@@ -363,7 +390,7 @@ namespace Python.Runtime {
                     Type[] types = a.GetTypes();
                     for (int i = 0; i < types.Length; i++) {
                         Type t = types[i];
-                        if (t.Namespace == nsname) {
+                        if ((t.Namespace ?? "") == nsname) {
                             names.Add(t.Name);
                         }
                     }
